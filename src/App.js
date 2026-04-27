@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import ReactFlow, { Background, Controls, MiniMap } from 'reactflow';
+import ReactFlow, { Background, Controls } from 'reactflow';
 import { createClient } from '@supabase/supabase-js';
 import 'reactflow/dist/style.css';
 
@@ -12,6 +12,8 @@ export default function FamilyTree() {
   const [edges, setEdges] = useState([]);
   const [selectedMember, setSelectedMember] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isAddingMode, setIsAddingMode] = useState(false);
+  const [newNode, setNewNode] = useState({ first_name: '', gender: 'male', is_alive: true, father_id: null });
 
   useEffect(() => { fetchData(); }, []);
 
@@ -42,20 +44,24 @@ export default function FamilyTree() {
     }
   };
 
-  const handleAdd = async (type) => {
-    const name = prompt(`أدخل الاسم الأول:`);
-    if (name) {
-      const fatherId = type === 'son' ? selectedMember.id : selectedMember.father_id;
-      const { error } = await supabase.from('members').insert([{
-        id: Date.now().toString(),
-        first_name: name,
-        father_id: fatherId,
-        gender: 'male',
-        is_alive: true,
-        country: 'المملكة العربية السعودية',
-        city: 'الخبر'
-      }]);
-      if (!error) fetchData();
+  const startAdding = (type) => {
+    setNewNode({ 
+      first_name: '', 
+      gender: 'male', 
+      is_alive: true, 
+      father_id: type === 'son' ? selectedMember.id : selectedMember.father_id,
+      country: 'المملكة العربية السعودية',
+      city: 'الخبر'
+    });
+    setIsAddingMode(true);
+  };
+
+  const saveNewMember = async () => {
+    if (!newNode.first_name) return alert("يرجى كتابة الاسم");
+    const { error } = await supabase.from('members').insert([{ ...newNode, id: Date.now().toString() }]);
+    if (!error) {
+      setIsAddingMode(false);
+      fetchData();
     }
   };
 
@@ -65,7 +71,7 @@ export default function FamilyTree() {
   return (
     <div style={{ width: '100vw', height: '100vh', display: 'flex', direction: 'rtl', backgroundColor: '#FBFCFC' }}>
       <div style={{ flex: 1 }}>
-        <ReactFlow nodes={nodes} edges={edges} onNodeClick={(e, n) => { setSelectedMember(n.data); setIsSidebarOpen(true); }} fitView>
+        <ReactFlow nodes={nodes} edges={edges} onNodeClick={(e, n) => { setSelectedMember(n.data); setIsSidebarOpen(true); setIsAddingMode(false); }} fitView>
           <Background />
           <Controls />
         </ReactFlow>
@@ -73,53 +79,66 @@ export default function FamilyTree() {
 
       {isSidebarOpen && selectedMember && (
         <div style={{ width: '380px', background: '#fff', borderRight: '1px solid #ddd', padding: '20px', zIndex: 100, overflowY: 'auto' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h3 style={{ margin: 0 }}>{selectedMember.first_name}</h3>
-            <button onClick={() => setIsSidebarOpen(false)} style={{ cursor: 'pointer', background: 'none', border: 'none' }}>✕</button>
-          </div>
-
-          <label style={labelStyle}>الاسم الأول</label>
-          <input style={inputStyle} value={selectedMember.first_name || ''} onChange={(e) => handleUpdate('first_name', e.target.value)} />
-
-          <label style={labelStyle}>الدولة (country)</label>
-          <input style={inputStyle} value={selectedMember.country || ''} onChange={(e) => handleUpdate('country', e.target.value)} />
-
-          <label style={labelStyle}>المدينة (city)</label>
-          <input style={inputStyle} value={selectedMember.city || ''} onChange={(e) => handleUpdate('city', e.target.value)} />
-
-          <label style={labelStyle}>الجنس</label>
-          <select style={inputStyle} value={selectedMember.gender || 'male'} onChange={(e) => handleUpdate('gender', e.target.value)}>
-            <option value="male">ذكر</option>
-            <option value="female">أنثى</option>
-          </select>
-
-          <label style={labelStyle}>على قيد الحياة</label>
-          <select style={inputStyle} value={selectedMember.is_alive} onChange={(e) => handleUpdate('is_alive', e.target.value === 'true')}>
-            <option value="true">نعم</option>
-            <option value="false">لا (متوفى)</option>
-          </select>
-
-          <label style={labelStyle}>رقم الهوية الوطنية</label>
-          <input style={inputStyle} value={selectedMember.national_id || ''} onChange={(e) => handleUpdate('national_id', e.target.value)} />
-
-          <label style={labelStyle}>العنوان الوطني المختصر</label>
-          <input style={inputStyle} value={selectedMember.national_address_short || ''} onChange={(e) => handleUpdate('national_address_short', e.target.value)} />
-
-          <label style={labelStyle}>رقم الجوال</label>
-          <input style={inputStyle} value={selectedMember.phone_number || ''} onChange={(e) => handleUpdate('phone_number', e.target.value)} />
-
-          <label style={labelStyle}>رابط الصورة (photo_url)</label>
-          <input style={inputStyle} value={selectedMember.photo_url || ''} onChange={(e) => handleUpdate('photo_url', e.target.value)} />
-
-          <hr style={{ margin: '25px 0' }} />
           
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-            <button onClick={() => handleAdd('son')} style={{ padding: '12px', backgroundColor: '#2E4053', color: '#fff', border: 'none', borderRadius: '6px' }}>+ إضافة ابن</button>
-            <button onClick={() => handleAdd('brother')} style={{ padding: '12px', backgroundColor: '#AED6F1', border: 'none', borderRadius: '6px' }}>+ إضافة أخ</button>
-          </div>
+          {!isAddingMode ? (
+            /* لير التعديل */
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ margin: 0 }}>تعديل: {selectedMember.first_name}</h3>
+                <button onClick={() => setIsSidebarOpen(false)} style={{ cursor: 'pointer', background: 'none', border: 'none' }}>✕</button>
+              </div>
+
+              <label style={labelStyle}>الاسم الأول</label>
+              <input style={inputStyle} value={selectedMember.first_name || ''} onChange={(e) => handleUpdate('first_name', e.target.value)} />
+
+              <label style={labelStyle}>الجنس</label>
+              <select style={inputStyle} value={selectedMember.gender || 'male'} onChange={(e) => handleUpdate('gender', e.target.value)}>
+                <option value="male">ذكر</option>
+                <option value="female">أنثى</option>
+              </select>
+
+              <label style={labelStyle}>على قيد الحياة</label>
+              <select style={inputStyle} value={selectedMember.is_alive} onChange={(e) => handleUpdate('is_alive', e.target.value === 'true')}>
+                <option value="true">نعم</option>
+                <option value="false">لا (متوفى)</option>
+              </select>
+
+              <label style={labelStyle}>رقم الهوية الوطنية</label>
+              <input style={inputStyle} value={selectedMember.national_id || ''} onChange={(e) => handleUpdate('national_id', e.target.value)} />
+
+              <label style={labelStyle}>رقم الجوال</label>
+              <input style={inputStyle} value={selectedMember.phone_number || ''} onChange={(e) => handleUpdate('phone_number', e.target.value)} />
+
+              <hr style={{ margin: '25px 0' }} />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <button onClick={() => startAdding('son')} style={{ padding: '12px', backgroundColor: '#2E4053', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>+ إضافة ابن</button>
+                <button onClick={() => startAdding('brother')} style={{ padding: '12px', backgroundColor: '#AED6F1', color: '#2E4053', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>+ إضافة أخ</button>
+              </div>
+            </>
+          ) : (
+            /* لير الإضافة */
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ margin: 0 }}>إضافة فرد جديد</h3>
+                <button onClick={() => setIsAddingMode(false)} style={{ cursor: 'pointer', background: 'none', border: 'none' }}>رجوع</button>
+              </div>
+              
+              <label style={labelStyle}>الاسم الأول</label>
+              <input style={inputStyle} placeholder="أدخل الاسم" onChange={(e) => setNewNode({...newNode, first_name: e.target.value})} />
+
+              <label style={labelStyle}>الجنس</label>
+              <select style={inputStyle} onChange={(e) => setNewNode({...newNode, gender: e.target.value})}>
+                <option value="male">ذكر</option>
+                <option value="female">أنثى</option>
+              </select>
+
+              <button onClick={saveNewMember} style={{ width: '100%', marginTop: '25px', padding: '12px', backgroundColor: '#28B463', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>حفظ البيانات</button>
+              <button onClick={() => setIsAddingMode(false)} style={{ width: '100%', marginTop: '10px', padding: '10px', backgroundColor: '#eee', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>إلغاء</button>
+            </>
+          )}
 
           <button onClick={async () => { if(window.confirm("حذف؟")) { await supabase.from('members').delete().eq('id', selectedMember.id); setIsSidebarOpen(false); fetchData(); } }}
-            style={{ width: '100%', marginTop: '30px', color: '#C0392B', border: '1px solid #C0392B', padding: '10px', borderRadius: '6px' }}>
+            style={{ width: '100%', marginTop: '40px', color: '#C0392B', border: '1px solid #C0392B', padding: '10px', borderRadius: '6px', background: 'none' }}>
             حذف نهائي
           </button>
         </div>
