@@ -12,35 +12,26 @@ export default function FamilyTree() {
   const [edges, setEdges] = useState([]);
   const [selectedMember, setSelectedMember] = useState(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [error, setError] = useState(null);
 
   useEffect(() => { fetchData(); }, []);
 
   const fetchData = async () => {
-    try {
-      const { data, error: apiError } = await supabase.from('members').select('*');
-      if (apiError) throw apiError;
-
-      if (data) {
-        setNodes(data.map((m, i) => ({
-          id: m.id.toString(),
-          data: { ...m, label: m.first_name },
-          position: { x: 250, y: i * 150 },
-          style: { 
-            background: !m.is_alive ? '#F2F4F4' : (m.gender === 'female' ? '#F9EBEA' : '#EBF5FB'),
-            border: `2px solid ${!m.is_alive ? '#95A5A6' : (m.gender === 'female' ? '#E6B0AA' : '#AED6F1')}`,
-            borderRadius: '10px', padding: '12px', width: 160, textAlign: 'center', boxShadow: '0 2px 5px rgba(0,0,0,0.05)'
-          }
-        })));
-        setEdges(data.filter(m => m.father_id).map(m => ({
-          id: `e${m.father_id}-${m.id}`,
-          source: m.father_id.toString(),
-          target: m.id.toString(),
-          animated: true,
-          style: { stroke: '#BDC3C7', strokeWidth: 2 }
-        })));
-      }
-    } catch (err) { setError(`خطأ: ${err.message}`); }
+    const { data } = await supabase.from('members').select('*');
+    if (data) {
+      setNodes(data.map((m, i) => ({
+        id: m.id.toString(),
+        data: { ...m, label: m.first_name },
+        position: { x: 250, y: i * 150 },
+        style: { 
+          background: !m.is_alive ? '#F2F4F4' : (m.gender === 'female' ? '#F9EBEA' : '#EBF5FB'),
+          border: `1px solid ${!m.is_alive ? '#95A5A6' : (m.gender === 'female' ? '#E6B0AA' : '#AED6F1')}`,
+          borderRadius: '8px', padding: '10px', width: 140, textAlign: 'center'
+        }
+      })));
+      setEdges(data.filter(m => m.father_id).map(m => ({
+        id: `e${m.father_id}-${m.id}`, source: m.father_id.toString(), target: m.id.toString(), animated: true
+      })));
+    }
   };
 
   const handleUpdate = async (field, value) => {
@@ -52,72 +43,86 @@ export default function FamilyTree() {
   };
 
   const handleAdd = async (type) => {
-    const name = prompt(`أدخل اسم ال${type === 'son' ? 'ابن' : 'أخ'}:`);
+    const name = prompt(`أدخل الاسم الأول:`);
     if (name) {
       const fatherId = type === 'son' ? selectedMember.id : selectedMember.father_id;
       const { error } = await supabase.from('members').insert([{
         id: Date.now().toString(),
         first_name: name,
-        last_name: 'العامر', // قيمة افتراضية
         father_id: fatherId,
         gender: 'male',
-        is_alive: true
+        is_alive: true,
+        city: 'الخبر' 
       }]);
       if (!error) fetchData();
     }
   };
 
-  const inputStyle = { width: '100%', padding: '10px', marginTop: '5px', borderRadius: '5px', border: '1px solid #ddd', fontSize: '14px' };
-  const labelStyle = { fontSize: '12px', color: '#7F8C8D', fontWeight: 'bold', display: 'block', marginTop: '15px' };
-
-  if (error) return <div style={{ padding: '50px', textAlign: 'center', color: 'red' }}>{error}</div>;
+  const inputStyle = { width: '100%', padding: '8px', marginTop: '5px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '14px' };
+  const labelStyle = { fontSize: '11px', color: '#7F8C8D', display: 'block', marginTop: '12px', fontWeight: 'bold' };
 
   return (
-    <div style={{ width: '100vw', height: '100vh', display: 'flex', backgroundColor: '#FBFCFC', direction: 'rtl' }}>
-      <div style={{ flex: 1, position: 'relative' }}>
+    <div style={{ width: '100vw', height: '100vh', display: 'flex', direction: 'rtl', backgroundColor: '#FBFCFC' }}>
+      <div style={{ flex: 1 }}>
         <ReactFlow nodes={nodes} edges={edges} onNodeClick={(e, n) => { setSelectedMember(n.data); setIsSidebarOpen(true); }} fitView>
-          <Background color="#F4F6F7" />
+          <Background />
           <Controls />
-          <MiniMap />
         </ReactFlow>
       </div>
 
       {isSidebarOpen && selectedMember && (
-        <div style={{ width: '380px', background: '#fff', borderRight: '1px solid #ddd', padding: '25px', zLayer: 1000, overflowY: 'auto', boxShadow: '2px 0 15px rgba(0,0,0,0.1)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h2 style={{ margin: 0, fontSize: '1.2rem', color: '#2E4053' }}>تفاصيل العضو</h2>
-            <button onClick={() => setIsSidebarOpen(false)} style={{ background: '#eee', border: 'none', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer' }}>✕</button>
+        <div style={{ width: '380px', background: '#fff', borderRight: '1px solid #ddd', padding: '20px', zIndex: 100, overflowY: 'auto' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h3 style={{ margin: 0 }}>{selectedMember.first_name}</h3>
+            <button onClick={() => setIsSidebarOpen(false)} style={{ cursor: 'pointer', background: 'none', border: 'none' }}>✕</button>
           </div>
+
+          {selectedMember.photo_url && (
+             <img src={selectedMember.photo_url} alt="Profile" style={{ width: '80px', height: '80px', borderRadius: '50%', marginTop: '15px', objectFit: 'cover' }} />
+          )}
 
           <label style={labelStyle}>الاسم الأول</label>
           <input style={inputStyle} value={selectedMember.first_name || ''} onChange={(e) => handleUpdate('first_name', e.target.value)} />
 
-          <label style={labelStyle}>اسم العائلة</label>
-          <input style={inputStyle} value={selectedMember.last_name || ''} onChange={(e) => handleUpdate('last_name', e.target.value)} />
-
           <label style={labelStyle}>الجنس</label>
           <select style={inputStyle} value={selectedMember.gender || 'male'} onChange={(e) => handleUpdate('gender', e.target.value)}>
-            <option value="male">ذكر</option>
-            <option value="female">أنثى</option>
+            <option value="male">ذكر (male)</option>
+            <option value="female">أنثى (female)</option>
           </select>
 
-          <label style={labelStyle}>الحالة</label>
+          <label style={labelStyle}>على قيد الحياة</label>
           <select style={inputStyle} value={selectedMember.is_alive} onChange={(e) => handleUpdate('is_alive', e.target.value === 'true')}>
-            <option value="true">حي</option>
-            <option value="false">متوفى</option>
+            <option value="true">نعم</option>
+            <option value="false">لا (متوفى)</option>
           </select>
 
-          <label style={labelStyle}>تاريخ الميلاد</label>
-          <input type="date" style={inputStyle} value={selectedMember.birth_date || ''} onChange={(e) => handleUpdate('birth_date', e.target.value)} />
+          <label style={labelStyle}>رقم الهوية الوطنية</label>
+          <input style={inputStyle} value={selectedMember.national_id || ''} onChange={(e) => handleUpdate('national_id', e.target.value)} />
 
-          <div style={{ marginTop: '30px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+          <label style={labelStyle}>المدينة</label>
+          <input style={inputStyle} value={selectedMember.city || ''} onChange={(e) => handleUpdate('city', e.target.value)} />
+
+          <label style={labelStyle}>العنوان الوطني المختصر</label>
+          <input style={inputStyle} value={selectedMember.national_address_short || ''} onChange={(e) => handleUpdate('national_address_short', e.target.value)} />
+
+          <label style={labelStyle}>رقم الجوال</label>
+          <input style={inputStyle} value={selectedMember.phone_number || ''} onChange={(e) => handleUpdate('phone_number', e.target.value)} />
+
+          <label style={labelStyle}>رابط الصورة الشخصية (URL)</label>
+          <input style={inputStyle} value={selectedMember.photo_url || ''} onChange={(e) => handleUpdate('photo_url', e.target.value)} />
+
+          <hr style={{ margin: '25px 0' }} />
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
             <button onClick={() => handleAdd('son')} style={{ padding: '12px', backgroundColor: '#2E4053', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>+ إضافة ابن</button>
             <button onClick={() => handleAdd('brother')} style={{ padding: '12px', backgroundColor: '#AED6F1', color: '#2E4053', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>+ إضافة أخ</button>
           </div>
 
-          <button onClick={async () => { if(window.confirm("هل أنت متأكد من الحذف؟")) { await supabase.from('members').delete().eq('id', selectedMember.id); setIsSidebarOpen(false); fetchData(); } }} 
-                  style={{ width: '100%', marginTop: '40px', backgroundColor: '#FADBD8', color: '#C0392B', border: 'none', padding: '10px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
-            حذف السجل نهائياً
+          <button 
+            onClick={async () => { if(window.confirm("حذف؟")) { await supabase.from('members').delete().eq('id', selectedMember.id); setIsSidebarOpen(false); fetchData(); } }}
+            style={{ width: '100%', marginTop: '30px', color: '#C0392B', border: '1px solid #C0392B', background: 'none', padding: '10px', borderRadius: '6px' }}
+          >
+            حذف نهائي
           </button>
         </div>
       )}
