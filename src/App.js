@@ -52,7 +52,8 @@ export default function FamilyTree() {
         father_id: fatherId,
         gender: 'male',
         is_alive: true,
-        city: 'الخبر' 
+        country: 'المملكة العربية السعودية',
+        city: 'الخبر'
       }]);
       if (!error) fetchData();
     }
@@ -77,17 +78,19 @@ export default function FamilyTree() {
             <button onClick={() => setIsSidebarOpen(false)} style={{ cursor: 'pointer', background: 'none', border: 'none' }}>✕</button>
           </div>
 
-          {selectedMember.photo_url && (
-             <img src={selectedMember.photo_url} alt="Profile" style={{ width: '80px', height: '80px', borderRadius: '50%', marginTop: '15px', objectFit: 'cover' }} />
-          )}
-
           <label style={labelStyle}>الاسم الأول</label>
           <input style={inputStyle} value={selectedMember.first_name || ''} onChange={(e) => handleUpdate('first_name', e.target.value)} />
 
+          <label style={labelStyle}>الدولة (country)</label>
+          <input style={inputStyle} value={selectedMember.country || ''} onChange={(e) => handleUpdate('country', e.target.value)} />
+
+          <label style={labelStyle}>المدينة (city)</label>
+          <input style={inputStyle} value={selectedMember.city || ''} onChange={(e) => handleUpdate('city', e.target.value)} />
+
           <label style={labelStyle}>الجنس</label>
           <select style={inputStyle} value={selectedMember.gender || 'male'} onChange={(e) => handleUpdate('gender', e.target.value)}>
-            <option value="male">ذكر (male)</option>
-            <option value="female">أنثى (female)</option>
+            <option value="male">ذكر</option>
+            <option value="female">أنثى</option>
           </select>
 
           <label style={labelStyle}>على قيد الحياة</label>
@@ -99,29 +102,24 @@ export default function FamilyTree() {
           <label style={labelStyle}>رقم الهوية الوطنية</label>
           <input style={inputStyle} value={selectedMember.national_id || ''} onChange={(e) => handleUpdate('national_id', e.target.value)} />
 
-          <label style={labelStyle}>المدينة</label>
-          <input style={inputStyle} value={selectedMember.city || ''} onChange={(e) => handleUpdate('city', e.target.value)} />
-
           <label style={labelStyle}>العنوان الوطني المختصر</label>
           <input style={inputStyle} value={selectedMember.national_address_short || ''} onChange={(e) => handleUpdate('national_address_short', e.target.value)} />
 
           <label style={labelStyle}>رقم الجوال</label>
           <input style={inputStyle} value={selectedMember.phone_number || ''} onChange={(e) => handleUpdate('phone_number', e.target.value)} />
 
-          <label style={labelStyle}>رابط الصورة الشخصية (URL)</label>
+          <label style={labelStyle}>رابط الصورة (photo_url)</label>
           <input style={inputStyle} value={selectedMember.photo_url || ''} onChange={(e) => handleUpdate('photo_url', e.target.value)} />
 
           <hr style={{ margin: '25px 0' }} />
           
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-            <button onClick={() => handleAdd('son')} style={{ padding: '12px', backgroundColor: '#2E4053', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>+ إضافة ابن</button>
-            <button onClick={() => handleAdd('brother')} style={{ padding: '12px', backgroundColor: '#AED6F1', color: '#2E4053', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>+ إضافة أخ</button>
+            <button onClick={() => handleAdd('son')} style={{ padding: '12px', backgroundColor: '#2E4053', color: '#fff', border: 'none', borderRadius: '6px' }}>+ إضافة ابن</button>
+            <button onClick={() => handleAdd('brother')} style={{ padding: '12px', backgroundColor: '#AED6F1', border: 'none', borderRadius: '6px' }}>+ إضافة أخ</button>
           </div>
 
-          <button 
-            onClick={async () => { if(window.confirm("حذف؟")) { await supabase.from('members').delete().eq('id', selectedMember.id); setIsSidebarOpen(false); fetchData(); } }}
-            style={{ width: '100%', marginTop: '30px', color: '#C0392B', border: '1px solid #C0392B', background: 'none', padding: '10px', borderRadius: '6px' }}
-          >
+          <button onClick={async () => { if(window.confirm("حذف؟")) { await supabase.from('members').delete().eq('id', selectedMember.id); setIsSidebarOpen(false); fetchData(); } }}
+            style={{ width: '100%', marginTop: '30px', color: '#C0392B', border: '1px solid #C0392B', padding: '10px', borderRadius: '6px' }}>
             حذف نهائي
           </button>
         </div>
